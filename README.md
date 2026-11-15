@@ -9,7 +9,7 @@ The schedule is a mixed-integer program. [HiGHS 1.15](https://highs.dev/) solves
 For each resident $r$, block $b$, and rotation $t$ they may take, the model has a binary variable
 
 $$
-x_{r,b,t} \in \{0,1\}.
+x_{r,b,t} \in \\{0,1\\}.
 $$
 
 One means that person is on that rotation for that block. Every resident has exactly one rotation in every block:
@@ -29,7 +29,7 @@ $$
 A training requirement $q$ is a credit total. If rotation $t$ is worth $c_{q,t}$ toward it, resident $r$ has to cover what they still owe:
 
 $$
-\sum_{b,t} c_{q,t}\, x_{r,b,t} \ge Q_{r,q}.
+\sum_{b,t} c_{q,t} x_{r,b,t} \ge Q_{r,q}.
 $$
 
 Rules at priority 0 stay in these inequalities. A rule can bend only when you marked it relaxable.
@@ -43,7 +43,7 @@ The balanced schedule uses this order.
 **Vacation.** A pending request has a weight. The first choice is 1000, and each later choice steps down by how many requests that resident made. An alternate week is worth half the request. The solver maximizes
 
 $$
-\sum_{r,b} v_{r,b}\, x_{r,b,\mathrm{vacation}}.
+\sum_{r,b} v_{r,b} x_{r,b,\mathrm{vacation}}.
 $$
 
 Approved leave is already fixed, so it does not add to $v$. With no pending requests, this stage is empty.
