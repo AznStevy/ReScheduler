@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Public Sans";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../node_modules/@fontsource-variable/public-sans/files/public-sans-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Public Sans";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../node_modules/@fontsource-variable/public-sans/files/public-sans-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@theme {
+  --font-sans: "Public Sans", "Segoe UI", sans-serif;
+  --font-mono: "Public Sans", "Segoe UI", sans-serif;
+  --color-navy: #253e50;
+  --color-on-navy: #f7f8f6;
+  --color-sidebar: #253e50;
+  --color-on-sidebar: #f7f8f6;
+  --color-steel: #477587;
+  --color-paper: #f7f8f6;
+  --color-head: #e9eef0;
+  --color-line: #d7dee1;
+  --color-ink: #25343d;
+  --color-muted: #52626b;
+  --color-amber: #b47b42;
+  --color-bad: #a34747;
+  --color-good: #527b68;
+  --color-card: #ffffff;
+}
+
+html {
+  font-size: 16px;
+  font-family: "Public Sans", "Segoe UI", sans-serif;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: "Public Sans", "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.data-table th,
+.data-table td {
+  padding: 8px 12px;
+  vertical-align: top;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-steel);
+  outline-offset: 1px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-steel) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--color-steel);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-steel) 65%, var(--color-ink));
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.bg-navy {
+  color: var(--color-on-navy);
+}
+
+.sidebar {
+  background: var(--color-sidebar);
+  color: var(--color-on-sidebar);
+}
+
+.sidebar-rule {
+  border-color: color-mix(in srgb, var(--color-on-sidebar) 16%, transparent);
+}
+
+
+.nav-idle {
+  color: color-mix(in srgb, var(--color-on-sidebar) 90%, transparent);
+}
+
+.nav-idle:hover {
+  background: color-mix(in srgb, var(--color-on-sidebar) 12%, transparent);
+}
+
+.nav-active {
+  background: var(--color-on-sidebar);
+  color: var(--color-sidebar);
+}
+
+.on-navy-soft {
+  color: color-mix(in srgb, var(--color-on-navy) 78%, transparent);
+}
+
+.on-tint {
+  color: #24343d;
+}
+
+.on-tint-soft {
+  color: #52626b;
+}
+
+.sidebar-soft {
+  color: color-mix(in srgb, var(--color-on-sidebar) 82%, transparent);
+}
+
+.sidebar-faint {
+  color: color-mix(in srgb, var(--color-on-sidebar) 68%, transparent);
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.page-in {
+  animation: page-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-in {
+    animation: none;
+  }
+}
+
+@media print {
+  aside,
+  header,
+  .no-print {
+    display: none !important;
+  }
+  main,
+  .app-column,
+  .page-in,
+  .schedule-layout,
+  .print-area {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
