@@ -1,80 +1,73 @@
 # ReScheduler
 
-ReScheduler is a standalone residency scheduling application. It loads as a static website and then does all of its work in the browser: editing, validation, mixed-integer optimization, constraint relaxation, and storage. There is no backend, database server, account system, or hosted solver.
+ReScheduler fills a residency year. Residents, rotations, blocks, and rules are all data, so the same app works for any program.
 
-The optimizer is [HiGHS 1.15](https://highs.dev/) compiled to WebAssembly. It runs in a Web Worker so the page stays usable while a model is solving. If the solver fails to load, ReScheduler stops and says so. It does not invent a schedule with a heuristic.
+The schedule is a mixed-integer program. [HiGHS 1.15](https://highs.dev/) solves it with branch and cut, compiled to WebAssembly and run beside the page. If the clock runs out before a feasible grid exists, that is the answer.
 
-## Local development
+## The assignment
 
-Node.js 20 or newer is enough for local development. The GitHub Actions workflow uses Node.js 22.
+For each resident \(r\), block \(b\), and rotation \(t\) they may take, the model has a binary variable
 
-```bash
-npm install
-npm run dev
-```
+\[
+x_{r,b,t} \in \{0,1\}.
+\]
 
-Open the URL Vite prints, usually `http://127.0.0.1:5173`.
+One means that person is on that rotation for that block. Every resident has exactly one rotation in every block:
 
-The first screen is a fictional sample program so the calendar is visible before any file is imported. Rotations, requirements, and training years are data, so the same application covers any residency. Two other samples are in Settings: a conflict that can be relaxed, and a staffing conflict that cannot. Real resident information does not belong in this repository. GitHub Pages publishes the files you commit.
+\[
+\sum_t x_{r,b,t} = 1.
+\]
 
-## Tests
+A rotation that covers several blocks is a start, and the weeks it covers are tied to that start. Locked weeks, a locked resident, and approved leave are fixed before the search. A block where someone has no eligible rotation is reported up front, and the solver is not asked to drop the lock or the leave.
 
-```bash
-npm test
-npm run test:e2e
-```
+Staffing is the headcount on a rotation:
 
-`npm test` runs Vitest. It covers feasible schedules, impossible staffing, protected leave, locks, graduation requirements, career preferences, fairness, authorized relaxation, distinct alternatives, cancellation between stages, solver timeouts, and JSON, CSV, and Excel transfer. One test builds a validated schedule for the 60-resident demo. That test is slower than the others.
+\[
+m_{t,b} \le \sum_r x_{r,b,t} \le M_{t,b}.
+\]
 
-`npm run test:e2e` runs Playwright against the dev server in Chromium. The config and the spec are JavaScript so they load on Node 20.9, which does not provide `module.register`. Install the browser once with `npx playwright install chromium`. The end-to-end test checks that a two-variable binary integer program reaches objective 1 inside the worker.
+A training requirement \(q\) is a credit total. If rotation \(t\) is worth \(c_{q,t}\) toward it, resident \(r\) has to cover what they still owe:
 
-```bash
-npm run smoke:solver
-```
+\[
+\sum_{b,t} c_{q,t}\, x_{r,b,t} \ge Q_{r,q}.
+\]
 
-runs the same class of HiGHS check directly in Node.
+Rules at priority 0 stay in these inequalities. A rule can bend only when you marked it relaxable.
 
-## Production build
+## Choosing among feasible schedules
 
-```bash
-npm run build
-npm run preview
-```
+Feasible grids are not ranked by one blended score. The goals run in order. Each is a linear function of the \(x\) variables. When a goal finishes, its value is written in as a constraint, and the next goal is optimized inside what remains.
 
-The build is a static `dist` directory. `base` is `./`, so the same files work on GitHub Pages, Cloudflare Pages, or Netlify without a repository-specific path. The WebAssembly file is emitted next to the JavaScript. The deployed site does not call a backend.
+The balanced schedule uses this order.
 
-## GitHub Pages
+**Vacation.** A pending request has a weight. The first choice is 1000, and each later choice steps down by how many requests that resident made. An alternate week is worth half the request. The solver maximizes
 
-The workflow in `.github/workflows/pages.yml` installs dependencies, runs the unit tests and Playwright, builds the site, and deploys `dist` with GitHub Actions. In the repository settings, set Pages to deploy from GitHub Actions. The first deployment needs the `github-pages` environment, which Actions creates.
+\[
+\sum_{r,b} v_{r,b}\, x_{r,b,\mathrm{vacation}}.
+\]
 
-Pushing to `main` or `master` starts the workflow. You can also run it manually.
+Approved leave is already fixed, so it does not add to \(v\). With no pending requests, this stage is empty.
 
-## Importing and exporting
+**Fairness.** Inside a class and track, ICU, nights, wards, and holiday blocks each get their own load. For a category, let \(u_r\) be the blocks resident \(r\) is given, plus the same kind of work from earlier in training, minus blocks a requirement already demands of them. Holiday work is a block on a holiday that is not vacation. The solver minimizes \(z\) subject to \(z \ge u_r\) for everyone in the group, which pulls down whoever would otherwise carry the most.
 
-Settings has the full set of transfers:
+**Career.** A rotation that matches an interest or an elective preference scores up to 1000, with the same rank weights as vacation. The total of those points is maximized. A score entered on the rotation replaces the one inferred from its name.
 
-- JSON project backup and restore, including settings, versions, and the audit log
-- Excel workbook with residents, rotations, staffing, requirements, vacations, and assignments
-- CSV schedule grid and CSV resident list
-- ICS calendar of the current assignments
-- Print from the master schedule
+**Stability.** Assignments that already match the grid are kept when that does not give back an earlier goal. Weeks that are already past weigh more.
 
-A file is checked before it replaces the program. Rows that point at missing people, blocks, or rotations are rejected and the current program stays as it is. A resident CSV replaces residents only. A schedule CSV replaces assignments for the residents it contains.
+**Spacing.** If two adjacent blocks are both high intensity, that pair counts. The number of such pairs is minimized last.
 
-Chief residents can keep the workbook in a spreadsheet, import it for a solve, and export the result. The application does not require a shared database.
+Generation also searches a few other schedules, each of which puts vacation, fairness, career, or stability ahead of the rest. Preview one, then apply it. Applying is what writes the grid.
 
-## Browser storage
+## When every rule cannot hold
 
-Programs are stored in IndexedDB on this computer, in this browser profile. Clearing site data, using a private window, or moving to another computer removes them. This is not an enterprise-grade secure record. Exported JSON and Excel files contain the whole program, so treat them like any other local document, especially on a shared computer.
+If the hard model has no solution, rules you allowed to bend pick up slack. A staffing minimum becomes
 
-Settings can clear the saved copy and can reload a demonstration program. Reloading a demo replaces what is on screen. Export a backup first if you need to keep it.
+\[
+\sum_r x_{r,b,t} + s_{t,b} \ge m_{t,b}, \qquad s_{t,b} \in \mathbb{Z}_{\ge 0},
+\]
 
-## Optimization
+and a requirement gets the same kind of slack on the credit still owed. Slack stops at the limit you set for that rule. The solver minimizes the higher-priority slack first, then the total slack, then how many residents a requirement slack touches. Vacation, fairness, and the other goals run after that, on the loosened model.
 
-Generate runs one mixed-integer model for every resident and block together. Hard constraints include eligibility, one rotation at a time, locked assignments, and approved vacation. Priority 0 requirements and staffing minimums are not relaxed. Lower-priority goals run in order: vacation, fairness, career and elective preferences, changes to the current grid, then spacing. A later stage is not allowed to undo the score of an earlier one.
+Locks, protected leave, eligibility, and priority 0 never take slack. If those contradict each other, there is no schedule to offer.
 
-If the strict model is infeasible, ReScheduler builds slack only for constraints you marked as relaxable. It minimizes higher-priority violations first, then the size of the violation, then the number of residents affected. It then prepares alternatives for vacation, fairness, career alignment, and the fewest changes. A proposal is offered as valid only after a separate validator accepts it. If the immutable constraints still cannot be satisfied, the page says that no valid schedule can be generated.
-
-The time limit applies to each stage. Raising it can prove optimality on larger models. The status line says “proved optimal” only when HiGHS proved it and the relative gap setting is zero. Otherwise a feasible schedule is labeled as not proved optimal.
-
-Stop terminates the worker. The interface does not keep an unvalidated partial solution from a cancelled run.
+The grid is checked again, apart from the solver, against the same rules and whatever slack was used. A grid that fails that check stays off the calendar.
